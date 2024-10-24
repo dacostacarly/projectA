@@ -26,6 +26,8 @@ library(naniar)
 library(xfun)
 library(knitr)
 library(Epi)
+library(rstanarm)
+library(car)
 
 
 
@@ -247,30 +249,73 @@ Our hypothesis is that people who are uninsured will have lower health outcomes.
 
 ### Analysis 1 
 
+Numerical Summary for Uninsured & Health Outcomes
+
+```{r}
+#| warning: false
+
+```
+
+
 Variables Predicted: Health Outcome
 Predictor Modulated: Uninsured
 
 ```{r}
-a1 <- lm(Health ~ Uninsured, data = chr_2024)
+a1 <- lm(Uninsured ~ Health, data = chr_2024)
 
 model_parameters(a1)
 
 estimate_expectation(a1, data = "grid", ci = 0.95)
 
-ggplot(chr_2024, aes(x = Health, y = Uninsured)) +
+ggplot(chr_2024, aes(x = Uninsured, y = Health)) +
     geom_point(alpha = 0.5) + 
     geom_smooth(method = "lm", col = "red",
                 formula = y ~ x, se = TRUE) +
     geom_smooth(method = "loess", col = "blue",
                 formula = y ~ x, se = FALSE) +
-    labs(x = "Rate of Poor/Fair Health Outcomes (% by county)",
-         y = "Rate of Uninsured (% by county)",
-         title = "Do higher uninsured rates result in poorer health outcomes by county?")
+    labs(x = "Rate of Uninsured (% by county)",
+         y = "Rate of Poor/Fair Health Outcomes (% by county)",
+         title = "Do higher uninsured rates result in poorer health outcomes by county?", subtitle = "Counties within the states: New York, Ohio, Florida, Pennsylvania, California, & North Carolina")
 
 
 ```
 
 Our linear regression model and estimates show that higher uninsured rates are associated with worse health outcomes, as indicated by the increasing poor/fair health rates and their predictions. However, the model predictions become less precise as the uninsured percentage increases, reflected by the widening of the 95% confidence intervals and increasing standard errors. This trend is also seen in our visualization which suggests counties with higher rates of uninsured individuals tend to have worse health outcomes. The positive slope of the trend line implies that as the rate of poor/fair health outcomes increases, so does the rate of uninsured individuals, indicating a potential relationship between lack of insurance and poor health outcomes.
+
+### Analysis 1 Log Transformation
+
+## FIGURE OUT HOW TO DO THIS CORRECTLY?!
+
+```{r}
+
+a1log <- lm(Uninsured ~ log(Health), data = chr_2024)
+
+model_parameters(a1log)
+
+estimate_expectation(a1log, data = "grid", ci = 0.95)
+
+ggplot(chr_2024, aes(x = Uninsured, y = log(Health)) +
+    geom_point(alpha = 0.5) + 
+    geom_smooth(method = "lm", col = "red",
+                formula = y ~ x, se = TRUE) +
+    geom_smooth(method = "loess", col = "blue",
+                formula = y ~ x, se = FALSE) +
+    labs(x = "Rate of Uninsured (% by county)",
+         y = "Rate of Poor/Fair Health Outcomes (% by county)",
+         title = "Do higher uninsured rates result in poorer health outcomes by county?", subtitle = "Counties within the states: New York, Ohio, Florida, Pennsylvania, California, & North Carolina"))
+
+
+```
+
+### Analysis 1 Box-Cox & Check Model
+
+```{r}
+
+boxCox(a1)
+check_model(a1)
+
+```
+
 
 
 ## Analysis 2 Research Question
@@ -285,7 +330,27 @@ Our hypothesis people who are unemployed are more likely to be obese than those 
 ### Analysis 2 
 
 ```{r}
+chr_2024_clean <- chr_2024 %>% drop_na(Unemployment_grp, Obesity)
 
+p1 <- ggplot(chr_2024_clean, aes(x = Obesity), y = Unemployment_grp) +
+  geom_boxplot(na.rm = TRUE) +
+  stat_summary(geom = "point", fun = "mean", size = 2, col = "red") +
+  labs(title = "Obesity Rates by Unemployment Group", 
+       x = "Unemployment Group", 
+       y = "Obesity Rate (%)") + theme_minimal()
+
+p2 <- ggplot(chr_2024_clean, aes(x = Obesity, y = Unemployment_grp), fill = Unemployment_grp) +
+  stat_slab(aes(thickness = after_stat(pdf * n)), scale = 0.7, na.rm = TRUE) +  
+  stat_dotsinterval(side = "bottom", scale = 0.7, slab_linewidth = NA, na.rm = TRUE) +  
+  stat_summary(fun = mean, geom = "point", size = 3, col = "gold", na.rm = TRUE) + 
+  scale_fill_metro_d() +  
+  guides(fill = "none") + 
+  labs(x = "Obesity Rate (%)", y = "Unemployment Group") + 
+  theme_minimal()
+
+
+ p1 / p2 +
+  plot_annotation(title = "Analysis of Obesity Rates by Unemployment Group")
 
 
 
