@@ -1,0 +1,265 @@
+---
+title: "CHANGE THIS TO MORE MEANINGFUL TITLE: Health Outcomes by Employment Status"
+subtitle: "CHR 2024 & 2019 data describing 442 counties in New York, Ohio, Florida, Pennsylvania, California, & North Carolina"
+author: "Gabrielle Davis and Carly DaCosta"
+date-modified: last-modified
+format: 
+  html:
+    toc: true
+    number-sections: true
+    date-format: iso
+    embed-resources: true
+    code-overflow: wrap
+    code-tools: true
+    theme: default
+---
+
+# R Packages
+
+```{r}
+#| message: false
+
+knitr::opts_chunk$set(comment = NA)
+
+library(janitor)
+library(naniar)
+library(xfun)
+library(knitr)
+
+
+
+library(easystats)
+library(tidyverse)
+
+theme_set(theme_bw())
+
+
+
+```
+
+# Section 2: Data Ingest
+
+```{r}
+data_url <- 
+  "https://www.countyhealthrankings.org/sites/default/files/media/document/analytic_data2024.csv"
+
+chr_2024_raw <- read_csv(data_url, skip = 1, guess_max = 4000,
+   show_col_types = FALSE) |>
+  select(fipscode, county, state, county_clustered, year,
+         ends_with("rawvalue")) 
+
+
+chr_2024_raw <- chr_2024_raw |>
+  filter(county_clustered == 1)
+
+dim(chr_2024_raw) 
+
+```
+
+# Section 3: State Selection
+
+```{r}
+
+chr_2024 <- chr_2024_raw |>
+  filter(state %in% c("NY", "OH", "FL", "PA", "CA", "NC")) |>
+  mutate(state = factor(state))
+
+chr_2024 |> count(state) 
+
+```
+
+There is a total of 442 counties in total. We chose the states: New York, Ohio, Florida, Pennsylvania, California, & North Carolina because we are applying to graduate schools in these areas. There is a total of 442 counties in total.
+
+# Variable Selection
+
+```{r}
+
+chr_2024 <- chr_2024 |>
+  select(fipscode, state, county, county_clustered,
+         v002_rawvalue, v085_rawvalue, v011_rawvalue, 
+         v023_rawvalue, v009_rawvalue)
+
+```
+
+# Variable Cleaning and Renaming
+
+| Initial Name | New Name | Role | Description | Gathered |
+|:------------:|:------------:|:------------:|:--------------:|:------------:|
+| `v002_rawvalue` | **Health** | A1 outcome | \% of adults reporting fair or poor health (age-adjusted) | 2021 |
+| `v085_rawvalue` | **Uninsured** | A1 predictor | \% of population under age 65 without health insurance | 2021 |
+| `v011_rawvalue` | **Obesity** | A2 outcome | \% of the adult population (age ≤18) that reports a BMI ≥ 30 kg/m2 (age-adjusted) | 2021 |
+| \- | **Unemployment_grp** | A2 predictor | Low (unemployment_grp ≤ 3.5) or High (unemployment_grp ≥ 4.0) % of population age ≥ 16 who are unemployed but seeking work | 2022 |
+| `v023_rawvalue` | **Unemployment** | \- | \% of population age ≥ 16 who are unemployed but seeking work | 2022 |
+| `v009_rawvalue` | **Smoking_2024** | A3 outcome | \% of adults who are current smokers (age-adjusted), CHR 2024 | 2021 |
+| `v009_rawvalue` | **Smoking_2019** | A3 outcome | \% of adults who are current smokers (age-adjusted), CHR 2019 | 2016 |
+
+```{r}
+chr_2024 <- chr_2024 |>
+  mutate(Health = 100*v002_rawvalue,
+         Uninsured = 100*v085_rawvalue,
+         Obesity = 100*v011_rawvalue,
+         Unemployment = 100*v023_rawvalue,
+         Smoking_2024 = 100*v009_rawvalue,
+         .keep = "unused")
+```
+
+```{r}
+dim(chr_2024)
+```
+
+```{r}
+names(chr_2024)
+```
+
+# Creating the Analysis 2 Predictor
+
+```{r}
+
+chr_2024 |>
+  summarise(q40 = quantile(Unemployment, c(0.4)),
+            q60 = quantile(Unemployment, c(0.6)))
+
+chr_2024 <- chr_2024 |>
+  mutate(Unemployment_grp = case_when(
+    Unemployment <= 3.563121 ~ "Low",                              
+    Unemployment >= 4.0967 ~ "High"                             
+  )) |> mutate(Unemployment_grp = factor(Unemployment_grp))
+
+chr_2024 |> count(Unemployment_grp)
+
+
+```
+
+The variable being used as the binary factor is "Unemployment." To make our cut off points, we looked at the 40th and 60th percentiles of the chr_2024 data. This allowed us to establish our cut points of 3.563121 (low), and 4.0967 (high).
+
+# Adding 2019 Data for the Analysis 3 Outcome
+
+```{r}
+chr_2019_raw <- read_csv("431-projectA-chr_2019.csv", 
+                         guess_max = 4000, 
+                         show_col_types = FALSE)
+
+chr_2019_raw <- chr_2019_raw |> 
+  mutate(fipscode = as.character(fipscode))
+
+```
+
+```{r}
+chr_2019 <- chr_2019_raw |>
+  select(fipscode, v009_rawvalue)
+```
+
+```{r}
+chr_2024 <- left_join(chr_2024, chr_2019, by = "fipscode")
+```
+
+```{r}
+chr_2024 <- chr_2024 |>
+  mutate(Smoking_2019 = 100*v009_rawvalue,
+         .keep = "unused")
+```
+
+# Arranging and Saving the Analytic Tibble
+
+```{r}
+chr_2024 <- chr_2024 |>
+  select(fipscode, state, county, 
+         Health, Uninsured, 
+         Obesity, Unemployment_grp, 
+         Unemployment, 
+         Smoking_2024, Smoking_2019, 
+         county_clustered)
+
+write_rds(chr_2024, file = "chr_2024_Davis_DaCosta.Rds")
+```
+
+# Print the Tibble
+
+```{r}
+chr_2024
+```
+
+# Numerical Summaries
+
+## Table of States by Binary Factor
+
+```{r}
+chr_2024 |> tabyl(state, Unemployment_grp) |> 
+  adorn_totals(where = c("row", "col"))
+```
+
+## `describe_distribution()` results
+
+```{r}
+describe_distribution(chr_2024)
+```
+
+## `data_codebook()` results
+
+```{r}
+data_codebook(chr_2024, max_values = 6, range_at = 15)
+```
+
+Based on the data_codebook the minimum and maximum values make sense for our planned outcome and quantitative predictor variables.
+
+Fortunately, analysis 1 and analysis 3 don't have any missing values. For analysis 2, our binary factor has less than 20% missing values (19.9%).
+
+## Distinct Values
+
+```{r}
+chr_2024 |> 
+  summarise(across(everything(), ~ n_distinct(.))) |>
+  kable()
+```
+
+We have a unique fipscode for each of our 442 counties.
+
+For Analysis 1, we have at least 15 distinct variables for our outcomes (Health, Obesity, and Smoking in each year) and quantitative predictor (Uninsured). 
+
+# The Codebook
+
+Our **chr_2024** tibble contains *442* counties and *11* variables.
+
+| Variable | Role | Old Name | Description | Year(s) |
+|:-------------:|:-------------:|:-------------:|:-------------:|:-------------:|
+| **fipscode** | ID | `fipscode` | FIPS code | -- |
+| **state** | ID | `state` | State Abbreviation (NY, CA, OH, FL, NC, PA) | -- |
+| **county** | ID | `county` | County Name | -- |
+| **Health** | A1 outcome | `v002` | \% of adults reporting fair or poor health (age-adjusted) | 2021 |
+| **Uninsured** | A1 predictor | `v085` | \% of population under age 65 without health insurance | 2021 |
+| **Obesity** | A2 outcome | `v011` | \% of the adult population (age ≤18) that reports a BMI ≥ 30 kg/m2 (age-adjusted) | 2021 |
+| **Unemployment_grp** | A2 predictor | \- | Low (unemployment_grp ≤ 3.5) or High (unemployment_grp ≥ 4.0) % of population age ≥ 16 who are unemployed but seeking work | 2022 |
+| **Unemployment** | \- | `v023` | \% of population age ≥ 16 who are unemployed but seeking work | 2022 |
+| **Smoking_2024** | A3 outcome | `v009` | \% of adults who are current smokers (age-adjusted), CHR 2024 | 2021 |
+| **Smoking_2019** | A3 outcome | `v009` | \% of adults who are current smokers (age-adjusted), CHR 2019 | 2016 |
+| **county_clustered** | check | `county_clustered` | Indicates county is ranked (all values should be 1) | 2024 |
+
+# Section 12: Research Questions
+
+## Analysis 1 Research Question
+
+How does insurance status (Uninsured) impact health outcomes (Health) ?
+
+Our hypothesis is that people who are uninsured will have lower health outcomes.
+
+## Analysis 2 Research Question
+
+Is there an association between unemployment rates and adult obesity?
+
+Our hypothesis people who are unemployed are more likely to be obese than those who have jobs.
+
+## Analysis 3 Research Question
+
+How has the prevalence of adult smoking changed between 2019 and 2024?
+
+We hypothesize adult smoking rates decreased from 2019 to 2024 due to the popularity of vaping and other nicotine products.
+
+# Reflection
+
+The most challenging part of completing the work so far has been coordinating our schedules to work as partners. Initially, we were trying to determine if we could work together due to conflicting circumstances. Gabbi had an extremely busy schedule, managing multiple time commitments, while Carly was out of town, which made it difficult to find times to meet. We preferred working together because we think it's a great way to bounce ideas off each other and learn from each others' perspectives. In addition, having a second pair of eyes, helped catch our mistakes. We overcame our scheduling conflicts by working together on Zoom and communicating our availability with each other every day. As the deadline for Project A approached, we were finally able to meet in person and dedicated the remaining time before the deadline to completing the Project A plan. Here, we had time to review each step and choose each variable, allowing us to develop strong questions for our analyses. Overcoming timing issues was not easy, but we made it possible through communication and the help of modern technology.
+
+# Session Information
+
+```{r}
+xfun::session_info()
+```
