@@ -1,6 +1,6 @@
 ---
-title: "Health Outcomes by Employment Status"
-subtitle: "Using data from CHR 2024 (and CHR 2019)"
+title: "CHANGE THIS TO MORE MEANINGFUL TITLE: Health Outcomes by Employment Status"
+subtitle: "CHR 2024 & 2019 data describing 442 counties in New York, Ohio, Florida, Pennsylvania, California, & North Carolina"
 author: "Gabrielle Davis and Carly DaCosta"
 date-modified: last-modified
 format: 
