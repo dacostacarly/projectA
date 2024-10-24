@@ -14,7 +14,7 @@ format:
     theme: default
 ---
 
-# 1.R Packages
+# R Packages
 
 ```{r}
 #| message: false
@@ -65,6 +65,8 @@ chr_2024 <- chr_2024_raw |>
   mutate(state = factor(state))
 
 chr_2024 |> count(state) 
+
+dim(chr_2024_raw)
 ```
 
 There is a total of 442 counties in total. We chose these states because we are applying to graduate schools in these areas.
