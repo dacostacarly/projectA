@@ -1,5 +1,5 @@
 ---
-title: "CHANGE THIS TO MORE MEANINGFUL TITLE: Health Outcomes by Employment Status"
+title: "How Employment Status Affects Health Outcomes: A Comparative Analysis"
 subtitle: "CHR 2024 & 2019 data describing 442 counties in New York, Ohio, Florida, Pennsylvania, California, & North Carolina"
 author: "Gabrielle Davis and Carly DaCosta"
 date-modified: last-modified
@@ -240,17 +240,23 @@ Our **chr_2024** tibble contains *442* counties and *11* variables.
 
 How does insurance status (Uninsured) impact health outcomes (Health) ?
 
+Updated Question: Do uninsured individuals experience worse health outcomes compared to those with insurance?
+
 Our hypothesis is that people who are uninsured will have lower health outcomes.
 
 ## Analysis 2 Research Question
 
 Is there an association between unemployment rates and adult obesity?
 
+Updated Question: Is there an association between unemployment status (binary) and adult obesity rates (continuous)?
+
 Our hypothesis people who are unemployed are more likely to be obese than those who have jobs.
 
 ## Analysis 3 Research Question
 
 How has the prevalence of adult smoking changed between 2019 and 2024?
+
+Updated Question: Has the prevalence of adult smoking status increased or decreased between 2019 and 2024, in New York, Ohio, Florida, Pennsylvania, California, & North Carolina?
 
 We hypothesize adult smoking rates decreased from 2019 to 2024 due to the popularity of vaping and other nicotine products.
 
